@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Anonymous Chat & Games</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div id="authContainer" class="modal" style="display: flex">
+      <form id="loginForm" class="modal-content">
+        <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
+          🔒 Login
+        </h2>
+        <input type="text" id="loginUsername" placeholder="Username" required />
+        <input
+          type="password"
+          id="loginPassword"
+          placeholder="Password"
+          required
+        />
+        <button type="submit">Login</button>
+        <p style="text-align: center; margin-top: 15px">
+          Don't have an account? <a href="#" id="showRegister">Register here</a>
+        </p>
+      </form>
+
+      <form id="registerForm" class="modal-content" style="display: none">
+        <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
+          👤 Register
+        </h2>
+        <label for="registerAvatarInput" class="avatar-upload-label">
+          <img
+            id="registerAvatarPreview"
+            src="https://placehold.co/80x80/e5e7eb/4b5563?text=Avatar"
+            alt="Avatar Preview"
+          />
+          <span>Select Profile Picture</span>
+        </label>
+        <input
+          type="file"
+          id="registerAvatarInput"
+          accept="image/*"
+          style="display: none"
+        />
+        <input
+          type="text"
+          id="registerUsername"
+          placeholder="Username"
+          required
+        />
+        <input
+          type="password"
+          id="registerPassword"
+          placeholder="Password"
+          required
+        />
+        <button type="submit">Register</button>
+        <p style="text-align: center; margin-top: 15px">
+          Already have an account? <a href="#" id="showLogin">Login here</a>
+        </p>
+      </form>
+    </div>
+
+    <div id="alertModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 id="alertModalTitle" style="text-align: center"></h2>
+        <p
+          id="alertModalMessage"
+          style="text-align: center; font-size: 1.1rem"
+        ></p>
+        <button id="alertModalCloseBtn" style="margin-top: 16px">OK</button>
+      </div>
+    </div>
+
+    <div id="profilePictureModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 style="text-align: center">Update Profile Picture</h2>
+        <label for="newAvatarInput" class="avatar-upload-label">
+          <img
+            id="newAvatarPreview"
+            src="https://placehold.co/120x120/e5e7eb/4b5563?text=Avatar"
+            alt="Avatar Preview"
+          />
+          <span>Select New Image</span>
+        </label>
+        <input
+          type="file"
+          id="newAvatarInput"
+          accept="image/*"
+          style="display: none"
+        />
+        <div class="modal-buttons">
+          <button
+            type="button"
+            id="cancelAvatarChangeBtn"
+            class="btn-secondary"
+          >
+            Cancel
+          </button>
+          <button type="button" id="saveAvatarChangeBtn">Save</button>
+        </div>
+        <button
+          id="logoutBtnSidebar"
+          class="btn-danger btn-full-width"
+          style="margin-top: 24px"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <div id="createGroupModal" class="modal" style="display: none">
+      <form id="createGroupForm" class="modal-content">
+        <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
+          Create a New Group
+        </h2>
+        <input
+          type="text"
+          id="groupNameInput"
+          placeholder="Enter group name"
+          required
+          maxlength="30"
+        />
+        <h4>Select Members (Max 9)</h4>
+        <div id="groupUserSelectionList"></div>
+        <p
+          id="groupMemberCount"
+          style="text-align: right; font-size: 0.9em; margin-top: 5px"
+        >
+          0/9 selected
+        </p>
+        <div class="modal-buttons">
+          <button type="button" id="cancelCreateGroupBtn" class="btn-secondary">
+            Cancel
+          </button>
+          <button type="submit">Create Group</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="manageGroupModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 id="manageGroupTitle" style="text-align: center">Manage Group</h2>
+        <h4>Current Members</h4>
+        <div id="currentGroupMembers" class="group-management-list"></div>
+        <h4>Add Users</h4>
+        <div id="usersToAdd" class="group-management-list"></div>
+        <div class="modal-buttons" style="margin-top: 24px">
+          <button id="closeManageGroupModalBtn" class="btn-secondary">
+            Close
+          </button>
+          <button id="deleteGroupBtn" class="btn-danger">Delete Group</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="privateRequestModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2
+          id="privateRequestTitle"
+          style="
+            margin-bottom: 18px;
+            color: var(--primary-accent);
+            text-align: center;
+          "
+        >
+          💬 Private Chat Request
+        </h2>
+        <p
+          id="privateRequestFrom"
+          style="
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-top: -10px;
+            margin-bottom: 20px;
+          "
+        ></p>
+        <div class="modal-buttons">
+          <button id="declineRequestBtn" class="btn-danger">Decline</button>
+          <button id="acceptRequestBtn" class="btn-start">Accept</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="disconnectModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 style="text-align: center; color: var(--danger-color)">
+          Disconnect
+        </h2>
+        <p style="text-align: center; font-size: 1.1rem; margin-bottom: 20px">
+          Are you sure you want to disconnect from this private chat?
+        </p>
+        <div class="modal-buttons">
+          <button id="cancelDisconnectBtn" class="btn-secondary">Cancel</button>
+          <button id="confirmDisconnectBtn" class="btn-danger">
+            Disconnect
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="incomingCallModal" class="modal" style="display: none">
+      <div class="modal-content incoming-call-content">
+        <div id="incomingCallAvatar"></div>
+        <h2 id="incomingCallFrom"></h2>
+        <p id="incomingCallStatus">ringing...</p>
+        <div class="modal-buttons call-actions">
+          <div class="call-action">
+            <button id="declineCallBtn" class="call-control-btn danger">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M20.01 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39-3.41 3.41-3.41 8.95 0 12.36l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L16.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
+                ></path>
+              </svg>
+            </button>
+            <span>Decline</span>
+          </div>
+          <div class="call-action">
+            <button id="acceptCallBtn" class="call-control-btn accept">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M16.51 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39C1.52 7.4 1.52 12.94 4.93 16.35l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L12.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
+                  transform="rotate(135 12 12)"
+                ></path>
+              </svg>
+            </button>
+            <span>Accept</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="createGameModal" class="modal" style="display: none">
+      <form id="createGameForm" class="modal-content">
+        <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
+          🎮 Create a Game Room
+        </h2>
+        <div class="game-type-selector">
+          <label>
+            <input type="radio" name="gameType" value="doodle" checked />
+            <span>✏️ Doodle Dash</span>
+          </label>
+          <label>
+            <input type="radio" name="gameType" value="hangman" />
+            <span>🤔 Hangman</span>
+          </label>
+        </div>
+        <input
+          type="text"
+          id="roomNameInput"
+          placeholder="Enter room name"
+          required
+          maxlength="30"
+        />
+        <input
+          type="password"
+          id="roomPasswordInput"
+          placeholder="Optional 4-digit PIN"
+          pattern="[0-9]*"
+          inputmode="numeric"
+          maxlength="4"
+        />
+        <div class="modal-buttons">
+          <button type="button" id="cancelCreateGameBtn" class="btn-secondary">
+            Cancel
+          </button>
+          <button type="submit">Create Room</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="passwordPromptModal" class="modal" style="display: none">
+      <form id="passwordPromptForm" class="modal-content">
+        <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
+          🔒 Room is Protected
+        </h2>
+        <p
+          id="passwordPromptMessage"
+          style="text-align: center; margin-top: -10px; margin-bottom: 15px"
+        >
+          Enter the 4-digit PIN to join.
+        </p>
+        <p
+          id="passwordError"
+          style="
+            color: var(--error-color);
+            text-align: center;
+            font-weight: 600;
+            margin-top: -5px;
+            margin-bottom: 10px;
+            display: none;
+          "
+        ></p>
+        <input
+          type="password"
+          id="joinPasswordInput"
+          placeholder="4-digit PIN"
+          pattern="[0-9]*"
+          inputmode="numeric"
+          maxlength="4"
+          required
+        />
+        <div class="modal-buttons">
+          <button type="button" id="cancelJoinBtn" class="btn-secondary">
+            Cancel
+          </button>
+          <button type="submit">Join</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="scoreboardModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 id="scoreboardTitle">🏆 Game Over!</h2>
+        <div id="finalScores"></div>
+        <button type="button" id="closeScoreboardBtn" style="margin-top: 16px">
+          Close
+        </button>
+      </div>
+    </div>
+
+    <div id="howToPlayModal" class="modal" style="display: none">
+      <div id="howToPlayContent" class="modal-content">
+        <h2 id="howToPlayTitle" style="color: #4f46e5; text-align: center"></h2>
+        <div id="howToPlayRules"></div>
+        <button type="button" id="closeHowToPlayBtn" style="margin-top: 16px">
+          Got It!
+        </button>
+      </div>
+    </div>
+
+    <div id="fileTransferRequestModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 style="text-align: center">Incoming File Transfer</h2>
+        <p id="fileRequestInfo" style="text-align: center"></p>
+        <div class="modal-buttons">
+          <button id="declineFileBtn" class="btn-danger">Decline</button>
+          <button id="acceptFileBtn" class="btn-start">Accept</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="fileTransferProgressModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 id="fileProgressTitle" style="text-align: center">File Transfer</h2>
+        <div id="fileProgressInfo"></div>
+        <div class="progress-bar-container">
+          <div id="fileProgressBar" class="progress-bar"></div>
+        </div>
+        <div id="fileProgressStatus" style="text-align: center"></div>
+        <div id="fileDownloadLinkContainer" style="display: none"></div>
+        <div class="modal-buttons">
+          <button id="cancelFileTransferBtn" class="btn-danger">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="allUsersModal" class="modal" style="display: none">
+      <div id="mobileModalContent" class="modal-content">
+        <div id="mobileModalNav">
+          <button class="modal-nav-btn active" data-tab="users">Users</button>
+          <button class="modal-nav-btn" data-tab="game">Game</button>
+          <button class="modal-nav-btn" data-tab="appearance">
+            Appearance
+          </button>
+        </div>
+        <div class="modal-tab-viewport">
+          <div class="modal-tab-wrapper">
+            <div id="usersTab" class="modal-tab-content">
+              <div id="groupsContainerMobile">
+                <h3>My Groups</h3>
+                <div id="groupsListMobile"></div>
+                <button id="createGroupBtnMobile" class="btn-full-width">
+                  Create New Group
+                </button>
+              </div>
+              <div id="connectedChatsContainerMobile">
+                <h3>Private Chats</h3>
+                <div id="connectedChatsListMobile"></div>
+              </div>
+              <h3
+                style="margin-bottom: 12px; color: #4f46e5; text-align: center"
+              >
+                Online Users
+              </h3>
+              <div id="allUsersList"></div>
+            </div>
+            <div id="gameTab" class="modal-tab-content">
+              <h3
+                style="margin-bottom: 12px; color: #4f46e5; text-align: center"
+              >
+                Game Zone
+              </h3>
+              <div id="gameControlsMobile">
+                <button id="howToPlayBtnMobile" class="btn-secondary">
+                  How to Play
+                </button>
+                <button id="createGameRoomBtnMobile">Create Game Room</button>
+                <fieldset class="room-list-fieldset">
+                  <legend>Available Rooms</legend>
+                  <div id="gameRoomListMobile"></div>
+                </fieldset>
+                <div class="mobile-game-actions">
+                  <button id="startGameBtnMobile" style="display: none">
+                    Start Game
+                  </button>
+                  <button id="stopGameBtnMobile" style="display: none">
+                    Stop Game
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div id="appearanceTab" class="modal-tab-content">
+              <div id="profile-settings-mobile" style="padding-bottom: 16px">
+                <h4 style="margin: 0 0 12px 0; font-weight: 600">My Profile</h4>
+                <div id="myProfilePreviewMobile"></div>
+                <button
+                  id="changeAvatarBtnMobile"
+                  class="btn-full-width btn-secondary"
+                >
+                  Change Picture
+                </button>
+                <button
+                  id="logoutBtnMobile"
+                  class="btn-danger btn-full-width"
+                  style="margin-top: 10px"
+                >
+                  Logout
+                </button>
+              </div>
+              <div class="background-settings">
+                <h4>Room Background</h4>
+                <div
+                  id="backgroundOptionsMobile"
+                  class="background-options-grid"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button
+          onclick="document.getElementById('allUsersModal').style.display='none';"
+          class="btn-close-modal"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+
+    <div id="callContainer">
+      <div id="videoGrid"></div>
+      <video id="localVideo" autoplay muted playsinline></video>
+      <div id="callInfoBar">
+        <span id="callPartnerName"></span>
+        <span id="callStatusIndicator"></span>
+      </div>
+      <div id="audioCallView">
+        <div id="audioCallAvatar"></div>
+        <p>Audio Call</p>
+      </div>
+      <div id="callControls">
+        <button id="toggleMicBtn" class="call-control-btn" title="Mute Mic">
+          <svg
+            class="icon-mic"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+            ></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+          <svg
+            class="icon-mic-off"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+            <path
+              d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"
+            ></path>
+            <path
+              d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"
+            ></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <button
+          id="toggleVideoBtn"
+          class="call-control-btn"
+          title="Toggle Camera"
+        >
+          <svg
+            class="icon-video"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+          <svg
+            class="icon-video-off"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"
+            ></path>
+            <line x1="1" y1="1" x2="23" y2="23"></line>
+          </svg>
+        </button>
+        <button
+          id="endCallBtn"
+          class="call-control-btn danger"
+          title="End Call"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path
+              d="M20.01 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39-3.41 3.41-3.41 8.95 0 12.36l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L16.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
+            ></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="topBar" style="display: none">
+      <span id="roomTitle">🌐 Public Chat</span>
+      <div class="top-bar-buttons">
+        <button
+          id="startAudioCallBtn"
+          class="icon-btn"
+          title="Start Audio Call"
+          style="display: none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+            ></path>
+          </svg>
+        </button>
+        <button
+          id="startVideoCallBtn"
+          class="icon-btn"
+          title="Start Video Call"
+          style="display: none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+          </svg>
+        </button>
+        <button
+          id="manageGroupBtn"
+          class="icon-btn"
+          title="Manage Group Members"
+          style="display: none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+            ></path>
+          </svg>
+        </button>
+        <button id="theme-toggle" class="icon-btn" title="Toggle dark mode">
+          <svg
+            class="icon-moon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg
+            class="icon-sun"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+        <button id="showUsersBtn" class="icon-btn">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none">
+      <div id="sidebar">
+        <div id="sidebar-nav">
+          <button
+            class="sidebar-nav-btn active"
+            data-panel="sidebar-users"
+            title="Users & Chats"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </button>
+          <button
+            class="sidebar-nav-btn"
+            data-panel="sidebar-game"
+            title="Game Zone"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M6 12h4m-2-2v4"></path>
+              <path
+                d="M16.5 10.5a2.5 2.5 0 0 0-5 0m5 3a2.5 2.5 0 0 1-5 0"
+              ></path>
+              <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path>
+            </svg>
+          </button>
+          <button
+            class="sidebar-nav-btn"
+            data-panel="sidebar-appearance"
+            title="Settings"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="4"></circle>
+              ==$0
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <div id="sidebar-content">
+          <div id="sidebar-users" class="sidebar-panel active">
+            <div id="userListContainer">
+              <div id="groupsContainer">
+                <h3>My Groups</h3>
+                <div id="groupsList"></div>
+                <button id="createGroupBtn" class="btn-full-width">
+                  Create New Group
+                </button>
+              </div>
+              <div id="connectedChatsContainer">
+                <h3>Private Chats</h3>
+                <div id="connectedChatsList"></div>
+              </div>
+              <h3 style="margin: 0 0 12px 0">Online Users</h3>
+              <div id="userList"></div>
+            </div>
+          </div>
+          <div id="sidebar-game" class="sidebar-panel">
+            <div class="game-controls-desktop">
+              <h3 style="margin: 0 0 12px 0">Game Zone</h3>
+              <button id="howToPlayBtnDesktop" class="btn-secondary">
+                How to Play
+              </button>
+              <button id="createGameRoomBtnDesktop">Create Game Room</button>
+              <h4 class="room-list-header">Available Rooms</h4>
+              <div id="gameRoomListDesktop">
+                <p class="no-rooms-msg">No active rooms.</p>
+              </div>
+              <button id="startGameBtn" style="display: none">
+                Start Game
+              </button>
+              <button id="stopGameBtn" style="display: none">Stop Game</button>
+            </div>
+          </div>
+          <div id="sidebar-appearance" class="sidebar-panel">
+            <div id="profile-settings">
+              <h4>My Profile</h4>
+              <div id="myProfilePreview"></div>
+              <button id="changeAvatarBtn" class="btn-full-width btn-secondary">
+                Change Picture
+              </button>
+              <button id="logoutBtn" class="btn-danger btn-full-width">
+                Logout
+              </button>
+            </div>
+            <div class="background-settings">
+              <h4>Room Background</h4>
+              <div id="backgroundOptions" class="background-options-grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="chat">
+        <div id="doodleGameContainer" style="display: none">
+          <div id="gameTimer" class="game-timer"></div>
+          <div id="gameInfo"></div>
+          <canvas id="gameCanvas"></canvas>
+          <div id="drawingTools" style="display: none">
+            <button id="clearCanvasBtn">Clear</button>
+          </div>
+          <div id="gameOverlayMessage" class="game-overlay-message"></div>
+        </div>
+        <div id="hangmanGameContainer" style="display: none">
+          <div id="hangmanTimer" class="game-timer"></div>
+          <div id="hangmanDrawing">
+            <div class="hg-part gallows-base"></div>
+            <div class="hg-part gallows-pole"></div>
+            <div class="hg-part gallows-beam"></div>
+            <div class="hg-part gallows-rope"></div>
+            <div class="hg-part hg-head"></div>
+            <div class="hg-part hg-body"></div>
+            <div class="hg-part hg-arm-left"></div>
+            <div class="hg-part hg-arm-right"></div>
+            <div class="hg-part hg-leg-left"></div>
+            <div class="hg-part hg-leg-right"></div>
+          </div>
+          <div id="hangmanWordDisplay"></div>
+          <div id="hangmanIncorrectLetters"></div>
+          <div id="hangmanGameInfo"></div>
+        </div>
+        <div id="messages"></div>
+        <div id="input-area">
+          <div id="typing-indicator"></div>
+          <div id="error-message"></div>
+          <div id="emojiPicker" style="display: none"></div>
+          <div id="recordingIndicator" style="display: none">
+            <div class="dot-flashing"></div>
+            <span>Recording audio...</span>
+          </div>
+          <form id="form" autocomplete="off">
+            <input id="fileInput" type="file" style="display: none" />
+            <button
+              type="button"
+              id="shareFileBtn"
+              class="input-btn"
+              title="Send file P2P"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+                ></path>
+              </svg>
+            </button>
+            <button
+              type="button"
+              id="recordAudioBtn"
+              class="input-btn"
+              title="Send voice message"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+                ></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+            <input
+              id="input"
+              type="text"
+              placeholder="Type your message or guess..."
+              autocomplete="off"
+              maxlength="500"
+            />
+            <button
+              type="button"
+              id="emojiBtn"
+              class="input-btn"
+              title="Emojis"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+              </svg>
+            </button>
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
