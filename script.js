@@ -16,6 +16,7 @@ const connectedChatsList = document.getElementById("connectedChatsList");
 const connectedChatsListMobile = document.getElementById(
   "connectedChatsListMobile"
 );
+const backend_url = "https://backend-1-75se.onrender.com";
 const shareFileBtn = document.getElementById("shareFileBtn");
 const fileInput = document.getElementById("fileInput");
 const recordAudioBtn = document.getElementById("recordAudioBtn");
@@ -251,15 +252,6 @@ const FILE_CHUNK_SIZE = 16 * 1024; // 16KB chunk size for file transfers
 let fileTransferConnections = {}; // Stores P2P connections for file transfers
 let fileChunks = {}; // Stores incoming file chunks
 
-// --- WEBRTC CONFIGURATION ---
-const peerConnectionConfig = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-  ],
-};
-
 const predefinedBackgrounds = [
   "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?q=80&w=1374&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1501854140801-50d01698950b?q=80&w=1575&auto=format&fit=crop",
@@ -332,18 +324,15 @@ registerForm.addEventListener("submit", async (e) => {
   const password = document.getElementById("registerPassword").value;
 
   try {
-    const response = await fetch(
-      "https://backend-1-75se.onrender.com/register",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          password,
-          profilePicture: newProfilePictureDataUrl,
-        }),
-      }
-    );
+    const response = await fetch(backend_url + "/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        password,
+        profilePicture: newProfilePictureDataUrl,
+      }),
+    });
     const data = await response.json();
     if (response.ok) {
       showAlert(
@@ -374,7 +363,7 @@ loginForm.addEventListener("submit", async (e) => {
   const password = document.getElementById("loginPassword").value;
 
   try {
-    const response = await fetch("https://backend-1-75se.onrender.com/login", {
+    const response = await fetch(backend_url + "/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -426,14 +415,14 @@ function connectSocket(token) {
   if (socket && socket.active) {
     socket.disconnect();
   }
-  socket = io("https://backend-1-75se.onrender.com", {
+  socket = io(backend_url, {
     auth: {
       token,
     },
   });
 
   socket.on("connect", () => {
-    console.log("✅ Socket connected. Waiting for session details...");
+    console.log("Socket connected. Waiting for session details...");
     authContainer.style.display = "none";
     mainContainer.style.display = "flex";
     topBar.style.display = "flex";
@@ -473,7 +462,7 @@ function setupSocketListeners() {
       myProfile = userProfile || {};
 
       console.log(
-        `✅ Session ready. My Socket ID: ${myId}, My User ID: ${myUserId}`
+        `Session ready. My Socket ID: ${myId}, My User ID: ${myUserId}`
       );
       console.log(`Restored ${myGroups.length} groups.`);
 
@@ -496,7 +485,7 @@ function setupSocketListeners() {
         updateCallButtonVisibility();
         updateSideBar();
       } else {
-        switchRoom("public", "🌐 Public Chat", "public");
+        switchRoom("public", "Public Chat", "public");
       }
     }
   );
@@ -667,7 +656,7 @@ function setupSocketListeners() {
       allUsersModal.style.display = "none";
     }
     connectedRooms[room.id] = { withUser };
-    switchRoom(room.id, `🔒 Chat with ${withUser.name}`, "private");
+    switchRoom(room.id, `Chat with  ${withUser.name}`, "private");
     showGameOverlayMessage(
       `You are now chatting privately with ${withUser.name}.`,
       2000,
@@ -703,7 +692,7 @@ function setupSocketListeners() {
           2000,
           "system"
         );
-        switchRoom("public", "🌐 Public Chat", "public");
+        switchRoom("public", "Public Chat", "public");
       }
       delete connectedRooms[room];
       updateSideBar();
@@ -756,7 +745,7 @@ function setupSocketListeners() {
       `You have been removed from "${groupName}".`
     );
     if (currentRoom.id === `group-${groupId}`) {
-      switchRoom("public", "🌐 Public Chat", "public");
+      switchRoom("public", "Public Chat", "public");
     }
     updateSideBar();
   });
@@ -768,7 +757,7 @@ function setupSocketListeners() {
       `The group "${groupName}" has been deleted by the creator.`
     );
     if (currentRoom.id === `group-${groupId}`) {
-      switchRoom("public", "🌐 Public Chat", "public");
+      switchRoom("public", "Public Chat", "public");
     }
     updateSideBar();
   });
@@ -801,7 +790,7 @@ function setupSocketListeners() {
   socket.on("game:joined", (roomData) => {
     if (passwordPromptModal.style.display === "flex")
       passwordPromptModal.style.display = "none";
-    switchRoom(roomData.id, `🎮 ${roomData.name}`, roomData.gameType);
+    switchRoom(roomData.id, `${roomData.name}`, roomData.gameType);
     if (allUsersModal.style.display === "flex")
       allUsersModal.style.display = "none";
   });
@@ -834,7 +823,7 @@ function setupSocketListeners() {
     showGameOverlayMessage("New Round!", 2000);
   });
   socket.on("game:correct_guess", ({ guesser, word }) => {
-    showGameOverlayMessage(`✅ ${guesser.name} guessed it!`, 3000, "success");
+    showGameOverlayMessage(`${guesser.name} guessed it!`, 3000, "success");
     addMessage(
       {
         text: `${guesser.name} guessed the word! It was "${word}".`,
@@ -856,7 +845,7 @@ function setupSocketListeners() {
   socket.on("game:terminated", (message) => {
     showGameOverlayMessage(message, 3000);
     endGame();
-    switchRoom("public", "🌐 Public Chat", "public");
+    switchRoom("public", "Public Chat", "public");
   });
 
   socket.on("game:drawing_history", (history) => {
@@ -878,7 +867,7 @@ function setupSocketListeners() {
     ) {
       return socket.emit("call:decline", { targetId: from.id, reason: "busy" });
     }
-    console.log(`📞 Incoming call from ${from.name}`);
+    console.log(`Incoming call from ${from.name}`);
     incomingCallData = { from, offer };
     incomingCallFrom.textContent = from.name;
     incomingCallAvatar.innerHTML = renderAvatar(from);
@@ -891,7 +880,7 @@ function setupSocketListeners() {
       return;
     }
 
-    console.log("✅ Answer received, setting remote description.");
+    console.log("Answer received, setting remote description.");
     try {
       const pc = peerConnections[callPartnerId];
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
@@ -923,18 +912,14 @@ function setupSocketListeners() {
     }
   });
   socket.on("call:declined", ({ from, reason }) => {
-    let message = `❌ ${from.name || "User"} declined the call.`;
+    let message = `${from.name || "User"} declined the call.`;
     if (reason === "busy")
-      message = `❌ ${from.name || "User"} is busy on another call.`;
+      message = `${from.name || "User"} is busy on another call.`;
     showGameOverlayMessage(message, 3000, "system");
     endCall(false);
   });
   socket.on("call:busy", ({ from }) => {
-    showGameOverlayMessage(
-      `❌ ${from.name} is currently busy.`,
-      3000,
-      "system"
-    );
+    showGameOverlayMessage(`${from.name} is currently busy.`, 3000, "system");
     endCall(false);
   });
   socket.on("call:error", (message) => {
@@ -985,17 +970,17 @@ function setupSocketListeners() {
 
   socket.on("group-call:all-participants", (participants) => {
     console.log("Existing participants:", participants);
-    participants.forEach((participant) => {
+    participants.forEach(async (participant) => {
       if (participant.id !== myId) {
-        createPeerConnection(participant.id, true);
+        await createPeerConnection(participant.id, true);
       }
     });
   });
 
-  socket.on("group-call:new-participant", (participant) => {
+  socket.on("group-call:new-participant", async (participant) => {
     console.log("New participant joined:", participant);
     if (participant.id !== myId) {
-      createPeerConnection(participant.id, false);
+      await createPeerConnection(participant.id, false);
     }
   });
 
@@ -1010,18 +995,15 @@ function setupSocketListeners() {
     updateVideoGridLayout();
   });
 
-  // ✅ FIX: The group call signal handler is updated to prevent race conditions.
   socket.on("group-call:signal", async ({ senderId, signal }) => {
     let pc = peerConnections[senderId];
 
-    // If a connection doesn't exist and we receive an offer, it's from a new peer.
-    // Create a connection for them on the fly to avoid dropping the signal.
     if (!pc && signal.sdp && signal.type === "offer") {
       console.log(
         `Signal from new peer ${senderId}, creating receiver connection.`
       );
-      await createPeerConnection(senderId, false); // Create as a receiver
-      pc = peerConnections[senderId]; // Now pc exists
+      await createPeerConnection(senderId, false);
+      pc = peerConnections[senderId];
     }
 
     if (!pc) {
@@ -1035,7 +1017,6 @@ function setupSocketListeners() {
       if (signal.sdp) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
 
-        // After setting the remote description, process any candidates that arrived early
         if (iceCandidateQueue[senderId]) {
           for (const candidate of iceCandidateQueue[senderId]) {
             await pc.addIceCandidate(new RTCIceCandidate(candidate));
@@ -1053,8 +1034,6 @@ function setupSocketListeners() {
           });
         }
       } else if (signal.candidate) {
-        // If the remote description is set, add the candidate immediately.
-        // Otherwise, queue it to be added after the description is set.
         if (pc.remoteDescription) {
           await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
         } else {
@@ -1102,7 +1081,7 @@ function setupSocketListeners() {
       currentFileTransfer.status === "pending" &&
       currentFileTransfer.targetId === byUser.id
     ) {
-      console.log(`✅ ${byUser.name} accepted the file transfer.`);
+      console.log(`${byUser.name} accepted the file transfer.`);
       await createP2PFileConnection(byUser.id, true);
     }
   });
@@ -1208,7 +1187,7 @@ function updateConnectedChatsList(container) {
       if (e.target.classList.contains("disconnect-btn")) {
         showDisconnectConfirm(roomId);
       } else {
-        switchRoom(roomId, `🔒 Chat with ${user.name}`, "private");
+        switchRoom(roomId, `Chat with ${user.name}`, "private");
       }
     };
     container.appendChild(div);
@@ -1220,9 +1199,9 @@ function updateUserList(container) {
   container.innerHTML = "";
   const publicBtn = document.createElement("div");
   publicBtn.className = "user public-room";
-  publicBtn.innerHTML = `🌐 Public Room`;
+  publicBtn.innerHTML = `Public Room`;
   publicBtn.onclick = () => {
-    switchRoom("public", "🌐 Public Chat", "public");
+    switchRoom("public", "Public Chat", "public");
     if (allUsersModal.style.display === "flex") {
       allUsersModal.style.display = "none";
     }
@@ -1424,7 +1403,7 @@ confirmDisconnectBtn.addEventListener("click", () => {
     socket.emit("private:leave", { room: disconnectTarget });
     delete connectedRooms[disconnectTarget];
     if (currentRoom.id === disconnectTarget) {
-      switchRoom("public", "🌐 Public Chat", "public");
+      switchRoom("public", "Public Chat", "public");
     }
     updateSideBar();
   }
@@ -1436,9 +1415,7 @@ confirmDisconnectBtn.addEventListener("click", () => {
 const openHowToPlayModal = () => {
   const gameType = currentGameState.gameType || "doodle";
   howToPlayTitle.textContent =
-    gameType === "doodle"
-      ? "✏️ How to Play Doodle Dash"
-      : "🤔 How to Play Hangman";
+    gameType === "doodle" ? "How to Play Doodle Dash" : "How to Play Hangman";
   howToPlayRules.innerHTML =
     gameType === "doodle"
       ? `<ul>
@@ -1656,7 +1633,7 @@ function updateGameRoomList(rooms) {
   renderList(gameRoomListMobile);
 }
 function showScoreboard(winner, scores) {
-  scoreboardTitle.innerHTML = `🏆 ${winner.name} Wins!`;
+  scoreboardTitle.innerHTML = `${winner.name} Wins!`;
   finalScores.innerHTML = "<h3>Final Scores:</h3>";
   const scoreList = document.createElement("ul");
   const sortedPlayerIds = Object.keys(scores).sort(
@@ -1864,8 +1841,8 @@ function renderHangmanState(state) {
 
   if (state.isGameOver) {
     hangmanGameInfo.textContent = state.winner
-      ? `🎉 ${state.winner.name} won!`
-      : "😥 Game over!";
+      ? `${state.winner.name} won!`
+      : " Game over!";
   } else if (state.isRoundActive) {
     const currentPlayer = latestUsers.find(
       (u) => u.id === state.currentPlayerTurn
@@ -1888,6 +1865,27 @@ function renderHangmanState(state) {
 // ===================================================================================
 // ---  VIDEO & AUDIO CALL (WEBRTC) IMPLEMENTATION ---
 // ===================================================================================
+
+async function getTurnCredentials() {
+  // The API key is now handled securely by the server.
+  // We just need to call our own backend endpoint.
+  const url = backend_url + "/api/turn-credentials";
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`Failed to fetch TURN credentials: ${errorData.message}`);
+      return null;
+    }
+    const credentials = await response.json();
+    console.log("Successfully fetched TURN credentials from the server.");
+    return credentials;
+  } catch (error) {
+    console.error("Error fetching TURN credentials from server:", error);
+    return null;
+  }
+}
 
 function updateCallButtonVisibility() {
   const isPrivateChat = currentRoom.type === "private";
@@ -1919,7 +1917,6 @@ function updateCallButtonVisibility() {
 async function createPeerConnection(partnerSocketId, isInitiator) {
   if (peerConnections[partnerSocketId]) return;
 
-  // Safety check to ensure localStream is ready before proceeding.
   if (!localStream) {
     console.error(
       "Attempted to create a peer connection, but localStream is not available."
@@ -1927,12 +1924,24 @@ async function createPeerConnection(partnerSocketId, isInitiator) {
     return;
   }
 
-  const pc = new RTCPeerConnection(peerConnectionConfig);
+  const iceServers = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ];
+
+  const turnCredentials = await getTurnCredentials();
+  if (turnCredentials) {
+    iceServers.push(...turnCredentials);
+  }
+
+  const dynamicPeerConfig = { iceServers };
+  console.log("Using ICE configuration:", dynamicPeerConfig);
+
+  const pc = new RTCPeerConnection(dynamicPeerConfig);
   peerConnections[partnerSocketId] = pc;
   isMakingOffer[partnerSocketId] = false;
   iceCandidateQueue[partnerSocketId] = [];
 
-  // Now this line is safe
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
 
   pc.onicecandidate = (event) => {
@@ -2028,7 +2037,7 @@ async function startMediaCall(constraints, isJoining = false) {
         groupId,
         callType: constraints.video ? "video" : "audio",
       });
-      showGameOverlayMessage(`📞 Starting group call...`, 5000, "system");
+      showGameOverlayMessage(`Starting group call...`, 5000, "system");
     }
   } else {
     return;
@@ -2043,11 +2052,11 @@ async function startMediaCall(constraints, isJoining = false) {
 
     if (currentCallType === "private") {
       showGameOverlayMessage(
-        `📞 Calling ${connectedRooms[currentRoom.id].withUser.name}...`,
+        `Calling ${connectedRooms[currentRoom.id].withUser.name}...`,
         5000,
         "system"
       );
-      createPeerConnection(callPartnerId, true);
+      await createPeerConnection(callPartnerId, true);
     } else if (currentCallType === "group") {
       socket.emit("group-call:join", { roomId: currentRoom.id });
     }
@@ -2149,7 +2158,7 @@ dismissGroupCallBtn.addEventListener("click", () => {
 joinGroupCallBtn.addEventListener("click", async () => {
   if (!incomingCallData) return;
   const { group, callType } = incomingCallData;
-  const groupId = group.id; // Make sure groupId is defined
+  const groupId = group.id;
   document.getElementById("incomingGroupCallModal").style.display = "none";
 
   const localGroup = myGroups.find((g) => g._id === groupId);
@@ -2157,8 +2166,6 @@ joinGroupCallBtn.addEventListener("click", async () => {
     switchRoom(`group-${groupId}`, `👥 ${localGroup.name}`, "group");
   }
 
-  // Await the asynchronous startMediaCall function.
-  // This ensures localStream is ready before any subsequent network events are processed.
   await startMediaCall({ audio: true, video: callType === "video" }, true);
 
   incomingCallData = null;
@@ -2175,7 +2182,7 @@ acceptCallBtn.addEventListener("click", async () => {
     updateSideBar();
   }
   if (currentRoom.id !== privateRoomId) {
-    switchRoom(privateRoomId, `🔒 Chat with ${from.name}`, "private");
+    switchRoom(privateRoomId, `Chat with ${from.name}`, "private");
   }
 
   callPartnerId = from.id;
@@ -2271,14 +2278,26 @@ function updateVideoGridLayout() {
 }
 
 // ===================================================================================
-// --- 📁 P2P FILE TRANSFER IMPLEMENTATION ---
+// ---P2P FILE TRANSFER IMPLEMENTATION ---
 // ===================================================================================
 
 async function createP2PFileConnection(partnerSocketId, isInitiator) {
   if (fileTransferConnections[partnerSocketId])
     return fileTransferConnections[partnerSocketId];
 
-  const pc = new RTCPeerConnection(peerConnectionConfig);
+  const iceServers = [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ];
+
+  const turnCredentials = await getTurnCredentials();
+  if (turnCredentials) {
+    iceServers.push(...turnCredentials);
+  }
+
+  const dynamicPeerConfig = { iceServers };
+
+  const pc = new RTCPeerConnection(dynamicPeerConfig);
   fileTransferConnections[partnerSocketId] = pc;
 
   pc.onicecandidate = (event) => {
@@ -2322,7 +2341,7 @@ function initiateFileTransfer(targetId, file) {
     targetId,
     file: { name: file.name, size: file.size, type: file.type },
   });
-  updateFileProgressUI("requesting", file);
+  updateFileProgressUI("requesting", file, false);
   fileTransferProgressModal.style.display = "flex";
 }
 
@@ -2335,7 +2354,7 @@ acceptFileBtn.addEventListener("click", async () => {
     status: "receiving",
   };
   fileTransferRequestModal.style.display = "none";
-  updateFileProgressUI("receiving", file);
+  updateFileProgressUI("receiving", file, false);
   fileTransferProgressModal.style.display = "flex";
 
   socket.emit("file:accept", { targetId: fromUser.id });
@@ -2362,7 +2381,7 @@ cancelFileTransferBtn.addEventListener("click", () => {
 
 function setupSenderDataChannel(channel, targetId) {
   const { file } = currentFileTransfer;
-  updateFileProgressUI("sending", file);
+  updateFileProgressUI("sending", file, false);
 
   const highWaterMark = 1024 * 1024; // Buffer up to 1MB
   let offset = 0;
@@ -2392,7 +2411,7 @@ function setupSenderDataChannel(channel, targetId) {
         }
       } else {
         channel.send(JSON.stringify({ done: true }));
-        updateFileProgressUI("complete", file);
+        updateFileProgressUI("complete", file, false);
         showAlert("Success", "File sent successfully!", "success");
       }
     } catch (error) {
@@ -2438,6 +2457,7 @@ function setupReceiverDataChannel(channel, senderId) {
       if (typeof event.data === "string") {
         const data = JSON.parse(event.data);
         if (data.done) {
+          let showDownload = false;
           if (useFileSystemApi && fileWriter) {
             await fileWriter.close();
           } else if (fileChunks[senderId] && fileChunks[senderId].length > 0) {
@@ -2452,8 +2472,9 @@ function setupReceiverDataChannel(channel, senderId) {
 
             fileDownloadLinkContainer.innerHTML = "";
             fileDownloadLinkContainer.appendChild(downloadLink);
+            showDownload = true;
           }
-          updateFileProgressUI("complete", fileMeta);
+          updateFileProgressUI("complete", fileMeta, showDownload);
           showAlert("Success", "File received successfully!", "success");
           return;
         } else {
@@ -2514,7 +2535,7 @@ function setupReceiverDataChannel(channel, senderId) {
   };
 }
 
-function updateFileProgressUI(status, file) {
+function updateFileProgressUI(status, file, showDownloadLink) {
   const fileName = file.name;
   const fileSize = (file.size / 1024 / 1024).toFixed(2) + " MB";
 
@@ -2525,17 +2546,15 @@ function updateFileProgressUI(status, file) {
       ? "Receiving File"
       : "File Transfer";
   fileProgressInfo.textContent = `${fileName} (${fileSize})`;
-  fileProgressBar.style.width = "0%";
+  fileProgressBar.style.width = status === "complete" ? "100%" : "0%";
   fileProgressStatus.textContent =
     status === "requesting"
       ? "Waiting for response..."
       : status === "complete"
-      ? "File saved successfully!"
+      ? "File transfer complete!"
       : "Initializing...";
-  fileDownloadLinkContainer.style.display =
-    status === "complete" && !("showSaveFilePicker" in window)
-      ? "block"
-      : "none";
+
+  fileDownloadLinkContainer.style.display = showDownloadLink ? "block" : "none";
 
   cancelFileTransferBtn.textContent =
     status === "complete" ? "Close" : "Cancel";
@@ -2781,17 +2800,14 @@ saveAvatarChangeBtn.addEventListener("click", async () => {
 
   const token = localStorage.getItem("token");
   try {
-    const response = await fetch(
-      "https://backend-1-75se.onrender.com/update-profile",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ profilePicture: newProfilePictureDataUrl }),
-      }
-    );
+    const response = await fetch(backend_url + "/update-profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ profilePicture: newProfilePictureDataUrl }),
+    });
 
     if (response.ok) {
       showAlert("Success", "Profile picture updated!", "success");
@@ -2849,6 +2865,7 @@ async function startRecording() {
     mediaRecorder.start();
     isRecording = true;
     recordAudioBtn.classList.add("recording");
+    recordingIndicator.style.display = "flex"; // Changed to flex
     recordingIndicator.style.opacity = "1";
     audioChunks = [];
     mediaRecorder.addEventListener("dataavailable", (event) => {
@@ -2866,6 +2883,10 @@ function stopRecording() {
   isRecording = false;
   recordAudioBtn.classList.remove("recording");
   recordingIndicator.style.opacity = "0";
+  // Hide after transition
+  setTimeout(() => {
+    recordingIndicator.style.display = "none";
+  }, 300);
 
   mediaRecorder.addEventListener("stop", () => {
     if (audioChunks.length === 0) return;
