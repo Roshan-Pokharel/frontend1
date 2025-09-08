@@ -16,7 +16,6 @@ const connectedChatsList = document.getElementById("connectedChatsList");
 const connectedChatsListMobile = document.getElementById(
   "connectedChatsListMobile"
 );
-const backendUrl = "https://backend-1-75se.onrender.com";
 const shareFileBtn = document.getElementById("shareFileBtn");
 const fileInput = document.getElementById("fileInput");
 const recordAudioBtn = document.getElementById("recordAudioBtn");
@@ -150,6 +149,8 @@ const incomingCallFrom = document.getElementById("incomingCallFrom");
 const incomingCallAvatar = document.getElementById("incomingCallAvatar");
 const acceptCallBtn = document.getElementById("acceptCallBtn");
 const declineCallBtn = document.getElementById("declineCallBtn");
+const dismissGroupCallBtn = document.getElementById("dismissGroupCallBtn");
+const joinGroupCallBtn = document.getElementById("joinGroupCallBtn");
 
 // P2P File Transfer Modals
 const fileTransferRequestModal = document.getElementById(
@@ -242,6 +243,7 @@ let currentCallType = null; // 'private' or 'group'
 let callPartnerId = null; // For private calls
 let incomingCallData = null;
 let isMakingOffer = {}; // Track offer status per peer
+let iceCandidateQueue = {}; // Queue for early ICE candidates
 
 let incomingFileRequest = null;
 let currentFileTransfer = null;
@@ -330,15 +332,18 @@ registerForm.addEventListener("submit", async (e) => {
   const password = document.getElementById("registerPassword").value;
 
   try {
-    const response = await fetch(backendUrl + "/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        password,
-        profilePicture: newProfilePictureDataUrl,
-      }),
-    });
+    const response = await fetch(
+      "https://backend-1-75se.onrender.com/register",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          password,
+          profilePicture: newProfilePictureDataUrl,
+        }),
+      }
+    );
     const data = await response.json();
     if (response.ok) {
       showAlert(
@@ -369,7 +374,7 @@ loginForm.addEventListener("submit", async (e) => {
   const password = document.getElementById("loginPassword").value;
 
   try {
-    const response = await fetch(backendUrl + "/login", {
+    const response = await fetch("https://backend-1-75se.onrender.com/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -421,7 +426,7 @@ function connectSocket(token) {
   if (socket && socket.active) {
     socket.disconnect();
   }
-  socket = io(backendUrl, {
+  socket = io("https://backend-1-75se.onrender.com", {
     auth: {
       token,
     },
@@ -866,16 +871,6 @@ function setupSocketListeners() {
 
   // Call Listeners (Private)
   socket.on("call:incoming", async ({ from, offer }) => {
-    if (isCallActive || incomingCallData) {
-      return socket.emit("call:decline", { targetId: from.id, reason: "busy" });
-    }
-    console.log(`📞 Incoming call from ${from.name}`);
-    incomingCallData = { from, offer };
-    incomingCallFrom.textContent = from.name;
-    incomingCallAvatar.innerHTML = renderAvatar(from);
-    incomingCallModal.style.display = "flex";
-  });
-  socket.on("call:incoming", async ({ from, offer }) => {
     if (
       isCallActive ||
       incomingCallData ||
@@ -889,25 +884,42 @@ function setupSocketListeners() {
     incomingCallAvatar.innerHTML = renderAvatar(from);
     incomingCallModal.style.display = "flex";
   });
+
   socket.on("call:answer_received", async ({ answer }) => {
-    if (
-      !peerConnections[callPartnerId] ||
-      isMakingOffer[callPartnerId] === false
-    )
+    if (!peerConnections[callPartnerId] || !isMakingOffer[callPartnerId]) {
+      console.warn("Received a call answer but was not expecting one.");
       return;
-    console.log("✅ Answer received");
-    await peerConnections[callPartnerId].setRemoteDescription(
-      new RTCSessionDescription(answer)
-    );
-    isMakingOffer[callPartnerId] = false;
+    }
+
+    console.log("✅ Answer received, setting remote description.");
+    try {
+      const pc = peerConnections[callPartnerId];
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      isMakingOffer[callPartnerId] = false;
+
+      // Process any queued ICE candidates that arrived before the answer
+      if (iceCandidateQueue[callPartnerId]) {
+        for (const candidate of iceCandidateQueue[callPartnerId]) {
+          await pc.addIceCandidate(candidate);
+        }
+        delete iceCandidateQueue[callPartnerId];
+      }
+    } catch (error) {
+      console.error("Error setting remote description from answer:", error);
+    }
   });
+
   socket.on("call:ice_candidate_received", async ({ candidate, fromId }) => {
-    if (peerConnections[fromId]) {
+    const pc = peerConnections[fromId];
+    if (pc && pc.remoteDescription) {
       try {
-        await peerConnections[fromId].addIceCandidate(candidate);
+        await pc.addIceCandidate(candidate);
       } catch (e) {
         console.error("Error adding received ICE candidate", e);
       }
+    } else {
+      // If the peer connection isn't ready, queue the candidate
+      iceCandidateQueue[fromId]?.push(candidate);
     }
   });
   socket.on("call:declined", ({ from, reason }) => {
@@ -948,7 +960,6 @@ function setupSocketListeners() {
 
   // Group Call Listeners
   socket.on("group-call:incoming", ({ group, caller, callType }) => {
-    // Find the group name from the user's list of groups
     const localGroup = myGroups.find((g) => g._id === group.id);
     const groupName = localGroup ? localGroup.name : "a group";
 
@@ -957,9 +968,9 @@ function setupSocketListeners() {
       incomingCallData ||
       privateRequestModal.style.display === "flex"
     )
-      return; // User is busy
+      return;
 
-    incomingCallData = { group, caller, callType }; // Store incoming call data
+    incomingCallData = { group, caller, callType };
     document.getElementById(
       "incomingGroupCallFrom"
     ).textContent = `${caller.name}`;
@@ -999,16 +1010,39 @@ function setupSocketListeners() {
     updateVideoGridLayout();
   });
 
+  // ✅ FIX: The group call signal handler is updated to prevent race conditions.
   socket.on("group-call:signal", async ({ senderId, signal }) => {
-    const pc = peerConnections[senderId];
+    let pc = peerConnections[senderId];
+
+    // If a connection doesn't exist and we receive an offer, it's from a new peer.
+    // Create a connection for them on the fly to avoid dropping the signal.
+    if (!pc && signal.sdp && signal.type === "offer") {
+      console.log(
+        `Signal from new peer ${senderId}, creating receiver connection.`
+      );
+      await createPeerConnection(senderId, false); // Create as a receiver
+      pc = peerConnections[senderId]; // Now pc exists
+    }
+
     if (!pc) {
-      console.error("Peer connection not found for", senderId);
+      console.error(
+        `Peer connection for ${senderId} not found, and signal was not an offer.`
+      );
       return;
     }
 
-    if (signal.sdp) {
-      try {
+    try {
+      if (signal.sdp) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
+
+        // After setting the remote description, process any candidates that arrived early
+        if (iceCandidateQueue[senderId]) {
+          for (const candidate of iceCandidateQueue[senderId]) {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          }
+          delete iceCandidateQueue[senderId];
+        }
+
         if (signal.type === "offer") {
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
@@ -1018,15 +1052,17 @@ function setupSocketListeners() {
             signal: answer,
           });
         }
-      } catch (error) {
-        console.error("Error handling signal SDP:", error);
+      } else if (signal.candidate) {
+        // If the remote description is set, add the candidate immediately.
+        // Otherwise, queue it to be added after the description is set.
+        if (pc.remoteDescription) {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        } else {
+          iceCandidateQueue[senderId]?.push(signal.candidate);
+        }
       }
-    } else if (signal.candidate) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-      } catch (error) {
-        console.error("Error adding ICE candidate:", error);
-      }
+    } catch (error) {
+      console.error("Error handling group call signal:", error);
     }
   });
 
@@ -1060,7 +1096,6 @@ function setupSocketListeners() {
     cleanUpFileTransfer(byUser.id);
     fileTransferProgressModal.style.display = "none";
   });
-  // FIX: Add the missing listener for when a file transfer request is accepted
   socket.on("file:request_accepted", async ({ byUser }) => {
     if (
       currentFileTransfer &&
@@ -1068,7 +1103,6 @@ function setupSocketListeners() {
       currentFileTransfer.targetId === byUser.id
     ) {
       console.log(`✅ ${byUser.name} accepted the file transfer.`);
-      // The sender (initiator) now creates the P2P connection
       await createP2PFileConnection(byUser.id, true);
     }
   });
@@ -1093,9 +1127,6 @@ function setupSocketListeners() {
 }
 
 // --- CORE FUNCTIONS & PRIVATE CHAT ---
-// ... (rest of functions remain largely the same, but with new feature integrations)
-// The following functions are complete and include all original logic plus new feature logic.
-
 function addMessage(msg) {
   const item = document.createElement("div");
   item.classList.add("msg");
@@ -1855,7 +1886,7 @@ function renderHangmanState(state) {
 }
 
 // ===================================================================================
-// --- 📞 VIDEO & AUDIO CALL (WEBRTC) IMPLEMENTATION ---
+// ---  VIDEO & AUDIO CALL (WEBRTC) IMPLEMENTATION ---
 // ===================================================================================
 
 function updateCallButtonVisibility() {
@@ -1865,6 +1896,12 @@ function updateCallButtonVisibility() {
 
   startAudioCallBtn.style.display = canCall ? "inline-flex" : "none";
   startVideoCallBtn.style.display = canCall ? "inline-flex" : "none";
+
+  if (canCall) {
+    startAudioCallBtn.disabled = false;
+    startVideoCallBtn.disabled = false;
+  }
+
   manageGroupBtn.style.display =
     currentRoom.type === "group" && currentRoom.creator === myUserId
       ? "inline-flex"
@@ -1882,10 +1919,20 @@ function updateCallButtonVisibility() {
 async function createPeerConnection(partnerSocketId, isInitiator) {
   if (peerConnections[partnerSocketId]) return;
 
+  // Safety check to ensure localStream is ready before proceeding.
+  if (!localStream) {
+    console.error(
+      "Attempted to create a peer connection, but localStream is not available."
+    );
+    return;
+  }
+
   const pc = new RTCPeerConnection(peerConnectionConfig);
   peerConnections[partnerSocketId] = pc;
   isMakingOffer[partnerSocketId] = false;
+  iceCandidateQueue[partnerSocketId] = [];
 
+  // Now this line is safe
   localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
 
   pc.onicecandidate = (event) => {
@@ -1905,18 +1952,45 @@ async function createPeerConnection(partnerSocketId, isInitiator) {
       socket.emit(signalType, payload);
     }
   };
-  pc.ontrack = (event) => addRemoteStream(event.stream, partnerSocketId);
+
+  pc.ontrack = (event) => {
+    if (event.streams && event.streams[0]) {
+      addRemoteStream(event.streams[0], partnerSocketId);
+    }
+  };
+
   pc.onconnectionstatechange = () => {
-    if (["disconnected", "closed", "failed"].includes(pc.connectionState)) {
-      if (peerConnections[partnerSocketId]) {
-        peerConnections[partnerSocketId].close();
-        delete peerConnections[partnerSocketId];
-      }
-      const videoContainer = document.getElementById(
-        `video-${partnerSocketId}`
-      );
-      if (videoContainer) videoContainer.remove();
-      updateVideoGridLayout();
+    const state = pc.connectionState;
+    console.log(
+      `Connection state with ${partnerSocketId} changed to: ${state}`
+    );
+
+    switch (state) {
+      case "connected":
+        if (callStatusIndicator) callStatusIndicator.textContent = "Connected";
+        break;
+      case "disconnected":
+      case "closed":
+        showGameOverlayMessage("Call connection lost.", 2000, "system");
+        endCall(false);
+        break;
+      case "failed":
+        if (callStatusIndicator) callStatusIndicator.textContent = "Failed";
+        console.error(
+          `Connection with ${partnerSocketId} failed. Cleaning up.`
+        );
+        if (peerConnections[partnerSocketId]) {
+          peerConnections[partnerSocketId].close();
+          delete peerConnections[partnerSocketId];
+        }
+        const videoContainer = document.getElementById(
+          `video-${partnerSocketId}`
+        );
+        if (videoContainer) videoContainer.remove();
+        updateVideoGridLayout();
+        showGameOverlayMessage("Call connection failed.", 3000, "error");
+        endCall(false);
+        break;
     }
   };
 
@@ -1934,8 +2008,6 @@ async function createPeerConnection(partnerSocketId, isInitiator) {
       socket.emit(signalType, payload);
     } catch (error) {
       console.error("Error creating offer:", error);
-    } finally {
-      isMakingOffer[partnerSocketId] = false;
     }
   }
 }
@@ -1950,10 +2022,8 @@ async function startMediaCall(constraints, isJoining = false) {
     if (!partnerInfo) return displayError("Could not find a user to call.");
     callPartnerId = partnerInfo.id;
   } else if (currentCallType === "group") {
-    // If we are NOT joining, it means we are the one starting the call.
     if (!isJoining) {
       const groupId = currentRoom.id.split("-")[1];
-      // Emit the event to the server to notify other members.
       socket.emit("group-call:start", {
         groupId,
         callType: constraints.video ? "video" : "audio",
@@ -1961,7 +2031,7 @@ async function startMediaCall(constraints, isJoining = false) {
       showGameOverlayMessage(`📞 Starting group call...`, 5000, "system");
     }
   } else {
-    return; // Not a callable room type
+    return;
   }
 
   isCallActive = true;
@@ -1979,7 +2049,6 @@ async function startMediaCall(constraints, isJoining = false) {
       );
       createPeerConnection(callPartnerId, true);
     } else if (currentCallType === "group") {
-      // Everyone (initiator and joiners) must join the socket.io call room
       socket.emit("group-call:join", { roomId: currentRoom.id });
     }
   } catch (err) {
@@ -1991,20 +2060,34 @@ async function startMediaCall(constraints, isJoining = false) {
 
 function setupCallUI(isVideoCall) {
   callContainer.classList.add("active");
-  const partnerInfo = connectedRooms[currentRoom.id]?.withUser;
+  const partnerInfo =
+    currentCallType === "private"
+      ? connectedRooms[currentRoom.id]?.withUser
+      : null;
+
   callPartnerName.textContent =
     currentCallType === "group"
       ? roomTitle.textContent.replace("👥 ", "")
       : partnerInfo
       ? partnerInfo.name
       : "";
-  callStatusIndicator.textContent =
-    currentCallType === "private" ? "Calling..." : "Connected";
+  callStatusIndicator.textContent = "Connecting...";
   callContainer.classList.toggle("audio-only", !isVideoCall);
 
   localVideo.srcObject = localStream;
   toggleVideoBtn.style.display = isVideoCall ? "flex" : "none";
   localVideo.classList.toggle("hidden", !isVideoCall);
+
+  if (!isVideoCall && partnerInfo) {
+    audioCallAvatar.innerHTML = renderAvatar(partnerInfo);
+  } else if (!isVideoCall && currentCallType === "group") {
+    const group = myGroups.find((g) => `group-${g._id}` === currentRoom.id);
+    if (group) {
+      const initial = group.name.charAt(0).toUpperCase();
+      const avatarColor = generateColorFromId(group._id);
+      audioCallAvatar.innerHTML = `<div class="user-avatar" style="background-color: ${avatarColor}; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem;">${initial}</div>`;
+    }
+  }
 
   toggleMicBtn.classList.remove("mic-off");
   toggleVideoBtn.classList.remove("video-off");
@@ -2033,6 +2116,7 @@ function endCall(notifyPeer = true) {
   callPartnerId = null;
   currentCallType = null;
   incomingCallData = null;
+  iceCandidateQueue = {};
 
   callContainer.classList.remove("active");
   if (incomingCallModal.style.display === "flex")
@@ -2043,41 +2127,42 @@ function endCall(notifyPeer = true) {
 }
 
 // --- CALL EVENT LISTENERS ---
-startAudioCallBtn.addEventListener("click", () =>
-  startMediaCall({ audio: true, video: false }, false)
-);
-startVideoCallBtn.addEventListener("click", () =>
-  startMediaCall({ audio: true, video: true }, false)
-);
+startAudioCallBtn.addEventListener("click", () => {
+  startAudioCallBtn.disabled = true;
+  startVideoCallBtn.disabled = true;
+  startMediaCall({ audio: true, video: false }, false);
+});
+
+startVideoCallBtn.addEventListener("click", () => {
+  startAudioCallBtn.disabled = true;
+  startVideoCallBtn.disabled = true;
+  startMediaCall({ audio: true, video: true }, false);
+});
+
 endCallBtn.addEventListener("click", () => endCall(true));
 
-// FIX: Add event listeners for the incoming group call modal buttons
-document.getElementById("dismissGroupCallBtn").addEventListener("click", () => {
+dismissGroupCallBtn.addEventListener("click", () => {
   document.getElementById("incomingGroupCallModal").style.display = "none";
   incomingCallData = null;
 });
 
-document
-  .getElementById("joinGroupCallBtn")
-  .addEventListener("click", async () => {
-    if (!incomingCallData) return;
-    const { group, callType } = incomingCallData;
-    const groupId = group.id;
-    document.getElementById("incomingGroupCallModal").style.display = "none";
+joinGroupCallBtn.addEventListener("click", async () => {
+  if (!incomingCallData) return;
+  const { group, callType } = incomingCallData;
+  const groupId = group.id; // Make sure groupId is defined
+  document.getElementById("incomingGroupCallModal").style.display = "none";
 
-    const localGroup = myGroups.find((g) => g._id === groupId);
-    if (localGroup && currentRoom.id !== `group-${groupId}`) {
-      switchRoom(`group-${groupId}`, `👥 ${localGroup.name}`, "group");
-    }
+  const localGroup = myGroups.find((g) => g._id === groupId);
+  if (localGroup && currentRoom.id !== `group-${groupId}`) {
+    switchRoom(`group-${groupId}`, `👥 ${localGroup.name}`, "group");
+  }
 
-    // Use a short timeout to ensure the room switch is processed before starting media
-    setTimeout(() => {
-      // We are JOINING, not initiating, so we pass 'true'
-      startMediaCall({ audio: true, video: callType === "video" }, true);
-    }, 100);
+  // Await the asynchronous startMediaCall function.
+  // This ensures localStream is ready before any subsequent network events are processed.
+  await startMediaCall({ audio: true, video: callType === "video" }, true);
 
-    incomingCallData = null;
-  });
+  incomingCallData = null;
+});
 
 acceptCallBtn.addEventListener("click", async () => {
   if (!incomingCallData) return;
@@ -2151,7 +2236,7 @@ toggleVideoBtn.addEventListener("click", () => {
 });
 
 function addRemoteStream(stream, partnerId) {
-  if (document.getElementById(`video-${partnerId}`)) return; // Already exists
+  if (document.getElementById(`video-${partnerId}`)) return;
 
   const partner = latestUsers.find((u) => u.id === partnerId);
   const partnerName = partner ? partner.name : "User";
@@ -2270,7 +2355,6 @@ declineFileBtn.addEventListener("click", () => {
 
 cancelFileTransferBtn.addEventListener("click", () => {
   if (currentFileTransfer && currentFileTransfer.targetId) {
-    // You might want to send a cancel signal to the other peer here
     cleanUpFileTransfer(currentFileTransfer.targetId);
   }
   fileTransferProgressModal.style.display = "none";
@@ -2285,14 +2369,12 @@ function setupSenderDataChannel(channel, targetId) {
   const reader = new FileReader();
 
   const readSlice = (o) => {
-    // Safety check to ensure the reader isn't busy
     if (reader.readyState === 1) return;
     const slice = file.slice(o, o + FILE_CHUNK_SIZE);
     reader.readAsArrayBuffer(slice);
   };
 
   reader.onload = (e) => {
-    // FIX: Check if channel is still open before sending
     if (!currentFileTransfer || channel.readyState !== "open") return;
 
     try {
@@ -2305,12 +2387,10 @@ function setupSenderDataChannel(channel, targetId) {
       )} / ${(file.size / 1024 / 1024).toFixed(2)} MB`;
 
       if (offset < file.size) {
-        // FIX: Don't call readSlice here directly. Let onbufferedamountlow handle it.
         if (channel.bufferedAmount < highWaterMark) {
           readSlice(offset);
         }
       } else {
-        // Done sending
         channel.send(JSON.stringify({ done: true }));
         updateFileProgressUI("complete", file);
         showAlert("Success", "File sent successfully!", "success");
@@ -2327,7 +2407,6 @@ function setupSenderDataChannel(channel, targetId) {
     }
   };
 
-  // This event is the key to preventing the race condition
   channel.onbufferedamountlow = () => {
     if (offset < file.size) {
       readSlice(offset);
@@ -2335,7 +2414,6 @@ function setupSenderDataChannel(channel, targetId) {
   };
 
   channel.onopen = () => {
-    // Send metadata and start the transfer
     channel.send(
       JSON.stringify({ name: file.name, size: file.size, type: file.type })
     );
@@ -2353,7 +2431,6 @@ function setupReceiverDataChannel(channel, senderId) {
   let fileMeta;
   let useFileSystemApi = "showSaveFilePicker" in window;
 
-  // FIX: Always initialize the fileChunks array, just in case the user cancels the save dialog.
   fileChunks[senderId] = [];
 
   channel.onmessage = async (event) => {
@@ -2361,11 +2438,9 @@ function setupReceiverDataChannel(channel, senderId) {
       if (typeof event.data === "string") {
         const data = JSON.parse(event.data);
         if (data.done) {
-          // Transfer is complete
           if (useFileSystemApi && fileWriter) {
             await fileWriter.close();
           } else if (fileChunks[senderId] && fileChunks[senderId].length > 0) {
-            // Create a downloadable link for the in-memory file
             const fileBlob = new Blob(fileChunks[senderId], {
               type: fileMeta.type,
             });
@@ -2382,7 +2457,6 @@ function setupReceiverDataChannel(channel, senderId) {
           showAlert("Success", "File received successfully!", "success");
           return;
         } else {
-          // This is the initial metadata message
           fileMeta = data;
           receivedSize = 0;
 
@@ -2393,21 +2467,18 @@ function setupReceiverDataChannel(channel, senderId) {
               });
               fileWriter = (await handle.createWritable()).getWriter();
             } catch (err) {
-              // User cancelled the save dialog. We'll fall back to the in-memory method.
               console.log(
                 "User cancelled save dialog. Falling back to in-memory transfer."
               );
-              useFileSystemApi = false; // Disable API for the rest of this transfer
+              useFileSystemApi = false;
             }
           }
         }
       } else {
-        // This is a file chunk (ArrayBuffer)
         receivedSize += event.data.byteLength;
         if (useFileSystemApi && fileWriter) {
           await fileWriter.write(event.data);
         } else {
-          // Store the chunk in memory
           fileChunks[senderId].push(event.data);
         }
 
@@ -2710,14 +2781,17 @@ saveAvatarChangeBtn.addEventListener("click", async () => {
 
   const token = localStorage.getItem("token");
   try {
-    const response = await fetch(backendUrl + "/update-profile", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ profilePicture: newProfilePictureDataUrl }),
-    });
+    const response = await fetch(
+      "https://backend-1-75se.onrender.com/update-profile",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ profilePicture: newProfilePictureDataUrl }),
+      }
+    );
 
     if (response.ok) {
       showAlert("Success", "Profile picture updated!", "success");

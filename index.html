@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Anonymous Chat & Games</title>
+    <title>Chat & Games App</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,6 +17,7 @@
   </head>
 
   <body>
+    <!-- Authentication Modals -->
     <div id="authContainer" class="modal" style="display: flex">
       <form id="loginForm" class="modal-content">
         <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
@@ -72,6 +73,7 @@
       </form>
     </div>
 
+    <!-- General Alert Modal -->
     <div id="alertModal" class="modal" style="display: none">
       <div class="modal-content">
         <h2 id="alertModalTitle" style="text-align: center"></h2>
@@ -83,6 +85,7 @@
       </div>
     </div>
 
+    <!-- Profile Picture Management Modal -->
     <div id="profilePictureModal" class="modal" style="display: none">
       <div class="modal-content">
         <h2 style="text-align: center">Update Profile Picture</h2>
@@ -120,6 +123,7 @@
       </div>
     </div>
 
+    <!-- Group Chat Modals -->
     <div id="createGroupModal" class="modal" style="display: none">
       <form id="createGroupForm" class="modal-content">
         <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
@@ -165,16 +169,10 @@
       </div>
     </div>
 
+    <!-- Private Chat Modals -->
     <div id="privateRequestModal" class="modal" style="display: none">
       <div class="modal-content">
-        <h2
-          id="privateRequestTitle"
-          style="
-            margin-bottom: 18px;
-            color: var(--primary-accent);
-            text-align: center;
-          "
-        >
+        <h2 style="color: var(--primary-accent); text-align: center">
           💬 Private Chat Request
         </h2>
         <p
@@ -183,7 +181,6 @@
             text-align: center;
             font-size: 1.2rem;
             font-weight: 500;
-            margin-top: -10px;
             margin-bottom: 20px;
           "
         ></p>
@@ -211,11 +208,12 @@
       </div>
     </div>
 
+    <!-- Calling Modals -->
     <div id="incomingCallModal" class="modal" style="display: none">
       <div class="modal-content incoming-call-content">
         <div id="incomingCallAvatar"></div>
         <h2 id="incomingCallFrom"></h2>
-        <p id="incomingCallStatus">ringing...</p>
+        <p id="incomingCallStatus">is calling you...</p>
         <div class="modal-buttons call-actions">
           <div class="call-action">
             <button id="declineCallBtn" class="call-control-btn danger">
@@ -227,7 +225,8 @@
                 fill="currentColor"
               >
                 <path
-                  d="M20.01 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39-3.41 3.41-3.41 8.95 0 12.36l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L16.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
+                  d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.02.74-.25 1.02l-2.2 2.2z "
+                  transform="rotate(135 12 12)"
                 ></path>
               </svg>
             </button>
@@ -243,8 +242,7 @@
                 fill="currentColor"
               >
                 <path
-                  d="M16.51 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39C1.52 7.4 1.52 12.94 4.93 16.35l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L12.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
-                  transform="rotate(135 12 12)"
+                  d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.02.74-.25 1.02l-2.2 2.2z"
                 ></path>
               </svg>
             </button>
@@ -254,6 +252,55 @@
       </div>
     </div>
 
+    <!-- FIX: Added Incoming Group Call Modal -->
+    <div id="incomingGroupCallModal" class="modal" style="display: none">
+      <div class="modal-content incoming-call-content">
+        <div id="incomingGroupCallAvatar"></div>
+        <h2 id="incomingGroupCallFrom"></h2>
+        <p id="incomingGroupCallStatus">started a group call</p>
+        <div class="modal-buttons call-actions">
+          <div class="call-action">
+            <button id="dismissGroupCallBtn" class="call-control-btn danger">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  d="M20.01 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39-3.41 3.41-3.41 8.95 0 12.36l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L16.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
+                ></path>
+              </svg>
+            </button>
+            <span>Dismiss</span>
+          </div>
+          <div class="call-action">
+            <button id="joinGroupCallBtn" class="call-control-btn accept">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </button>
+            <span>Join Call</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Modals -->
     <div id="createGameModal" class="modal" style="display: none">
       <form id="createGameForm" class="modal-content">
         <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
@@ -298,23 +345,10 @@
         <h2 style="margin-bottom: 18px; color: #4f46e5; text-align: center">
           🔒 Room is Protected
         </h2>
-        <p
-          id="passwordPromptMessage"
-          style="text-align: center; margin-top: -10px; margin-bottom: 15px"
-        >
+        <p style="text-align: center; margin-top: -10px; margin-bottom: 15px">
           Enter the 4-digit PIN to join.
         </p>
-        <p
-          id="passwordError"
-          style="
-            color: var(--error-color);
-            text-align: center;
-            font-weight: 600;
-            margin-top: -5px;
-            margin-bottom: 10px;
-            display: none;
-          "
-        ></p>
+        <p id="passwordError" class="error-text" style="display: none"></p>
         <input
           type="password"
           id="joinPasswordInput"
@@ -331,6 +365,13 @@
           <button type="submit">Join</button>
         </div>
       </form>
+    </div>
+
+    <div id="wordSelectionModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h2 style="text-align: center">Choose a word to draw</h2>
+        <div id="wordOptionsContainer"></div>
+      </div>
     </div>
 
     <div id="scoreboardModal" class="modal" style="display: none">
@@ -353,10 +394,14 @@
       </div>
     </div>
 
+    <!-- File Transfer Modals -->
     <div id="fileTransferRequestModal" class="modal" style="display: none">
       <div class="modal-content">
-        <h2 style="text-align: center">Incoming File Transfer</h2>
-        <p id="fileRequestInfo" style="text-align: center"></p>
+        <h2 style="text-align: center">📁 Incoming File Transfer</h2>
+        <p
+          id="fileRequestInfo"
+          style="text-align: center; line-height: 1.5"
+        ></p>
         <div class="modal-buttons">
           <button id="declineFileBtn" class="btn-danger">Decline</button>
           <button id="acceptFileBtn" class="btn-start">Accept</button>
@@ -379,6 +424,7 @@
       </div>
     </div>
 
+    <!-- Mobile Navigation Modal -->
     <div id="allUsersModal" class="modal" style="display: none">
       <div id="mobileModalContent" class="modal-content">
         <div id="mobileModalNav">
@@ -471,6 +517,7 @@
       </div>
     </div>
 
+    <!-- Main Call UI Container -->
     <div id="callContainer">
       <div id="videoGrid"></div>
       <video id="localVideo" autoplay muted playsinline></video>
@@ -577,13 +624,15 @@
             fill="currentColor"
           >
             <path
-              d="M20.01 3.99c-1.54-1.54-3.58-2.39-5.79-2.39-2.21 0-4.25.85-5.79 2.39-3.41 3.41-3.41 8.95 0 12.36l2.12 2.12c.39.39 1.02.39 1.41 0l1.41-1.41-3.53-3.53a1 1 0 0 1 0-1.41l3.53-3.53a1 1 0 0 1 1.41 0l3.53 3.53a1 1 0 0 1 0 1.41L16.26 15l1.41 1.41c.39.39 1.02.39 1.41 0l2.12-2.12c3.42-3.41 3.42-8.95.01-12.36z"
+              d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.02.74-.25 1.02l-2.2 2.2z"
+              transform="rotate(135 12 12)"
             ></path>
           </svg>
         </button>
       </div>
     </div>
 
+    <!-- Main Application UI -->
     <div id="topBar" style="display: none">
       <span id="roomTitle">🌐 Public Chat</span>
       <div class="top-bar-buttons">
@@ -775,8 +824,7 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <circle cx="12" cy="12" r="4"></circle>
-              ==$0
+              <circle cx="12" cy="12" r="3"></circle>
               <path
                 d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
               ></path>
@@ -870,7 +918,7 @@
           <div id="typing-indicator"></div>
           <div id="error-message"></div>
           <div id="emojiPicker" style="display: none"></div>
-          <div id="recordingIndicator" style="display: none">
+          <div id="recordingIndicator">
             <div class="dot-flashing"></div>
             <span>Recording audio...</span>
           </div>

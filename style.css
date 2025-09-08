@@ -90,14 +90,12 @@ body {
   background: transparent;
   border: none;
   padding: 10px 16px;
-  font-size: 24px;
   color: var(--text-color);
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
 }
 
-/* ADDED: Ensure new SVG icons are sized correctly */
 .sidebar-nav-btn svg {
   width: 24px;
   height: 24px;
@@ -147,11 +145,11 @@ body {
 #userList,
 #groupsList,
 #connectedChatsList {
-  max-height: 20vh; /* Give them a max height so they dont take all space */
+  max-height: 20vh;
   flex-shrink: 0;
 }
 #userList {
-  flex: 1; /* Allow online users to take remaining space */
+  flex: 1;
   max-height: none;
 }
 
@@ -244,7 +242,6 @@ body {
   background: var(--primary-accent);
   color: #fff;
   border-bottom-right-radius: 6px;
-  padding-right: 30px;
 }
 
 .msg.other .bubble {
@@ -258,20 +255,10 @@ body {
   color: #422006;
   font-style: italic;
   text-align: center;
+  padding: 6px 12px;
+  font-size: 0.9em;
 }
 
-.read-receipt {
-  position: absolute;
-  bottom: 5px;
-  right: 10px;
-  font-size: 14px;
-  font-weight: bold;
-  color: rgba(255, 255, 255, 0.7);
-  transition: color 0.3s;
-}
-.read-receipt.read {
-  color: #86efac;
-}
 .msg .bubble > .sender-name {
   font-weight: 600;
   display: block;
@@ -358,12 +345,10 @@ button.btn-start:not(:disabled) {
 button.btn-start:not(:disabled):hover {
   background: var(--start-color-hover);
 }
-button.btn-danger,
-button.call-btn.danger {
+button.btn-danger {
   background: var(--danger-color);
 }
-button.btn-danger:hover,
-button.call-btn.danger:hover {
+button.btn-danger:hover {
   background: var(--danger-color-hover);
 }
 
@@ -507,17 +492,6 @@ body.dark-mode .group-details {
   border: 1.5px solid var(--sidebar-bg);
 }
 
-.red-dot {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 10px;
-  height: 10px;
-  background: #e11d48;
-  border-radius: 50%;
-  border: 2px solid var(--sidebar-bg);
-}
-
 #connectedChatsContainer,
 #connectedChatsContainerMobile,
 #groupsContainer,
@@ -627,7 +601,7 @@ body.dark-mode #typing-indicator {
 }
 
 #recordingIndicator {
-  display: flex;
+  display: none; /* Initially hidden */
   align-items: center;
   gap: 8px;
   font-weight: 600;
@@ -741,7 +715,7 @@ body.dark-mode #typing-indicator {
   top: 16px;
   left: 16px;
   right: 16px;
-  bottom: calc(16px + 68px);
+  bottom: calc(16px + 68px + 12px); /* +12px for form margin */
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -903,7 +877,7 @@ body.dark-mode #typing-indicator {
   top: 16px;
   left: 16px;
   right: 16px;
-  bottom: calc(16px + 68px);
+  bottom: calc(16px + 68px + 12px);
   z-index: 5;
   background: var(--chat-bg);
   border: 1px solid var(--border-color);
@@ -1081,6 +1055,7 @@ body.dark-mode #typing-indicator {
 }
 #privateRequestModal,
 #incomingCallModal,
+#incomingGroupCallModal,
 #disconnectModal,
 #fileTransferRequestModal,
 #fileTransferProgressModal {
@@ -1101,8 +1076,8 @@ body.dark-mode #typing-indicator {
   transition: background-color 0.3s;
 }
 
-/* Incoming Call Modal */
-#incomingCallModal .incoming-call-content {
+/* Incoming Call Modal Styling */
+.incoming-call-content {
   align-items: center;
   text-align: center;
   padding: 32px;
@@ -1110,11 +1085,13 @@ body.dark-mode #typing-indicator {
   color: #fff;
   border-radius: 16px;
 }
-body:not(.dark-mode) #incomingCallModal .incoming-call-content {
+body:not(.dark-mode) .incoming-call-content {
   background-color: var(--sidebar-bg);
   color: var(--text-color);
 }
-#incomingCallAvatar {
+
+#incomingCallAvatar,
+#incomingGroupCallAvatar {
   width: 90px;
   height: 90px;
   border-radius: 50%;
@@ -1130,25 +1107,32 @@ body:not(.dark-mode) #incomingCallModal .incoming-call-content {
   color: #fff;
   overflow: hidden;
 }
-#incomingCallAvatar img {
+#incomingCallAvatar img,
+#incomingGroupCallAvatar img,
+#incomingGroupCallAvatar div {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-#incomingCallFrom {
+
+#incomingCallFrom,
+#incomingGroupCallFrom {
   font-size: 1.75rem;
   font-weight: 600;
   margin: 0;
 }
-#incomingCallStatus {
+#incomingCallStatus,
+#incomingGroupCallStatus {
   font-size: 1rem;
   color: #b9bbbe;
   margin: 4px 0 24px 0;
 }
-body:not(.dark-mode) #incomingCallStatus {
+body:not(.dark-mode) #incomingCallStatus,
+body:not(.dark-mode) #incomingGroupCallStatus {
   color: var(--btn-secondary-bg);
 }
-#incomingCallModal .call-actions {
+
+.call-actions {
   display: flex;
   justify-content: center;
   width: 100%;
@@ -1172,22 +1156,26 @@ body:not(.dark-mode) .call-action span {
   width: 56px;
   height: 56px;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 50%; /* Make them circles */
 }
 .call-action .call-control-btn svg {
   width: 100%;
   height: 100%;
 }
-#declineCallBtn {
+#declineCallBtn,
+#dismissGroupCallBtn {
   background-color: var(--danger-color) !important;
 }
-#declineCallBtn:hover {
+#declineCallBtn:hover,
+#dismissGroupCallBtn:hover {
   background-color: var(--danger-color-hover) !important;
 }
-#acceptCallBtn {
+#acceptCallBtn,
+#joinGroupCallBtn {
   background-color: var(--start-color) !important;
 }
-#acceptCallBtn:hover {
+#acceptCallBtn:hover,
+#joinGroupCallBtn:hover {
   background-color: var(--start-color-hover) !important;
 }
 
@@ -1421,6 +1409,12 @@ body:not(.dark-mode) .call-action span {
 .call-control-btn.danger:hover {
   background-color: var(--danger-color-hover);
 }
+.call-control-btn.accept {
+  background-color: var(--start-color);
+}
+.call-control-btn.accept:hover {
+  background-color: var(--start-color-hover);
+}
 
 .call-control-btn.mic-off,
 .call-control-btn.video-off {
@@ -1577,7 +1571,8 @@ body:not(.dark-mode) .call-action span {
   margin: 0 0 12px 0;
   font-weight: 600;
 }
-#myProfilePreview {
+#myProfilePreview,
+#myProfilePreviewMobile {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1688,7 +1683,7 @@ body:not(.dark-mode) .call-action span {
     top: 78px;
     left: 10px;
     right: 10px;
-    bottom: 76px;
+    bottom: 88px;
   }
 
   #hangmanWordDisplay {
@@ -1716,6 +1711,7 @@ body:not(.dark-mode) .call-action span {
 #howToPlayModal,
 #createGroupModal,
 #profilePictureModal,
+#wordSelectionModal,
 #manageGroupModal {
   z-index: 1001;
 }
@@ -1834,4 +1830,28 @@ body:not(.dark-mode) .call-action span {
 #finalScores .score-points {
   font-weight: 700;
   color: var(--secondary-accent);
+}
+
+.error-text {
+  color: var(--error-color);
+  text-align: center;
+  font-weight: 600;
+  margin-top: -5px;
+  margin-bottom: 10px;
+}
+#wordOptionsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+.word-option-btn {
+  width: 100%;
+  background-color: var(--user-bg);
+  color: var(--text-color);
+  font-size: 1.1rem;
+}
+.word-option-btn:hover {
+  background-color: var(--primary-accent);
+  color: #fff;
 }
